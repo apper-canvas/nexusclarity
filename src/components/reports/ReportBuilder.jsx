@@ -1,683 +1,521 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { getIcon } from '../../utils/iconUtils';
+import { createReport, updateReport, getReportById } from '../../services/reportService';
+import ReportTemplates from './ReportTemplates';
 import ReportVisualization from './ReportVisualization';
 
 // Get icon components
-const SliderIcon = getIcon('Sliders');
-const LayersIcon = getIcon('Layers');
-const FilterIcon = getIcon('Filter');
-const BarChartIcon = getIcon('BarChart');
-const EyeIcon = getIcon('Eye');
 const SaveIcon = getIcon('Save');
-const XCircleIcon = getIcon('XCircle');
+const SettingsIcon = getIcon('Settings');
+const DatabaseIcon = getIcon('Database');
+const LayoutIcon = getIcon('Layout');
+const EyeIcon = getIcon('Eye');
+const FilterIcon = getIcon('Filter');
 const PlusIcon = getIcon('Plus');
-const TrashIcon = getIcon('Trash2');
-const RefreshCwIcon = getIcon('RefreshCw');
-const TableIcon = getIcon('Table');
-const PieChartIcon = getIcon('PieChart');
-const LineChartIcon = getIcon('LineChart');
-const AreaChartIcon = getIcon('TrendingUp');
+const TrashIcon = getIcon('Trash');
+const TemplateIcon = getIcon('FileText');
 
-// Available entities and their fields
-const entities = {
-  contacts: {
-    name: 'Contacts',
-    fields: [
-      { id: 'firstName', name: 'First Name', type: 'text' },
-      { id: 'lastName', name: 'Last Name', type: 'text' },
-      { id: 'email', name: 'Email', type: 'text' },
-      { id: 'phone', name: 'Phone', type: 'text' },
-      { id: 'company', name: 'Company', type: 'text' },
-      { id: 'title', name: 'Job Title', type: 'text' },
-      { id: 'status', name: 'Status', type: 'select', options: ['Lead', 'Customer', 'Partner'] },
-      { id: 'tags', name: 'Tags', type: 'array' },
-      { id: 'createdAt', name: 'Created Date', type: 'date' },
-      { id: 'lastActivity', name: 'Last Activity Date', type: 'date' }
-    ]
-  },
-  deals: {
-    name: 'Deals',
-    fields: [
-      { id: 'name', name: 'Deal Name', type: 'text' },
-      { id: 'amount', name: 'Amount', type: 'number' },
-      { id: 'stage', name: 'Stage', type: 'select', options: ['Prospect', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'] },
-      { id: 'priority', name: 'Priority', type: 'select', options: ['Low', 'Medium', 'High'] },
-      { id: 'probability', name: 'Probability (%)', type: 'number' },
-      { id: 'contactId', name: 'Contact', type: 'relation', entity: 'contacts' },
-      { id: 'companyId', name: 'Company', type: 'relation', entity: 'companies' },
-      { id: 'closeDate', name: 'Expected Close Date', type: 'date' },
-      { id: 'createdAt', name: 'Created Date', type: 'date' },
-      { id: 'lastUpdated', name: 'Last Updated', type: 'date' }
-    ]
-  },
-  tasks: {
-    name: 'Tasks',
-    fields: [
-      { id: 'title', name: 'Task Title', type: 'text' },
-      { id: 'description', name: 'Description', type: 'text' },
-      { id: 'status', name: 'Status', type: 'select', options: ['Not Started', 'In Progress', 'Completed', 'Deferred'] },
-      { id: 'priority', name: 'Priority', type: 'select', options: ['Low', 'Medium', 'High'] },
-      { id: 'assignedTo', name: 'Assigned To', type: 'text' },
-      { id: 'relatedTo', name: 'Related To', type: 'text' },
-      { id: 'dueDate', name: 'Due Date', type: 'date' },
-      { id: 'completedAt', name: 'Completed Date', type: 'date' },
-      { id: 'createdAt', name: 'Created Date', type: 'date' }
-    ]
-  }
-};
-
-// Available operators for filters
-const operators = [
-  { id: 'equals', name: 'Equals', types: ['text', 'number', 'select', 'relation'] },
-  { id: 'notEquals', name: 'Does Not Equal', types: ['text', 'number', 'select', 'relation'] },
-  { id: 'contains', name: 'Contains', types: ['text', 'array'] },
-  { id: 'notContains', name: 'Does Not Contain', types: ['text', 'array'] },
-  { id: 'greaterThan', name: 'Greater Than', types: ['number', 'date'] },
-  { id: 'lessThan', name: 'Less Than', types: ['number', 'date'] },
-  { id: 'between', name: 'Between', types: ['number', 'date'] },
-  { id: 'inTheLast', name: 'In the Last', types: ['date'] },
-  { id: 'isNull', name: 'Is Empty', types: ['text', 'number', 'date', 'select', 'relation', 'array'] },
-  { id: 'isNotNull', name: 'Is Not Empty', types: ['text', 'number', 'date', 'select', 'relation', 'array'] }
-];
-
-// Available visualization types
-const visualizationTypes = [
-  { id: 'table', name: 'Table', icon: TableIcon },
-  { id: 'bar', name: 'Bar Chart', icon: BarChartIcon },
-  { id: 'line', name: 'Line Chart', icon: LineChartIcon },
-  { id: 'pie', name: 'Pie Chart', icon: PieChartIcon },
-  { id: 'area', name: 'Area Chart', icon: AreaChartIcon }
-];
-
-const ReportBuilder = ({ initialReport, onSave, onCancel }) => {
-  const [activeStep, setActiveStep] = useState('fields');
+const ReportBuilder = ({ reportId, onSave, onCancel }) => {
+  // State for managing the report configuration
   const [reportName, setReportName] = useState('');
   const [reportDescription, setReportDescription] = useState('');
-  const [selectedEntity, setSelectedEntity] = useState('');
+  const [reportType, setReportType] = useState('chart');
+  const [chartType, setChartType] = useState('bar');
+  const [selectedEntity, setSelectedEntity] = useState('contacts');
   const [selectedFields, setSelectedFields] = useState([]);
   const [filters, setFilters] = useState([]);
-  const [visualizationType, setVisualizationType] = useState('table');
-  const [previewData, setPreviewData] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
-
-  // Initialize form with existing report data if editing
-  useEffect(() => {
-    if (initialReport) {
-      setReportName(initialReport.name);
-      setReportDescription(initialReport.description || '');
-      setSelectedEntity(initialReport.entity);
-      setSelectedFields(initialReport.fields || []);
-      setFilters(initialReport.filters || []);
-      setVisualizationType(initialReport.chartType || 'table');
-      
-      // Generate preview for the initial report
-      if (initialReport.entity && initialReport.fields && initialReport.fields.length > 0) {
-        generateReportPreview(initialReport.entity, initialReport.fields, initialReport.filters);
-      }
-    }
-  }, [initialReport]);
-
-  // Handle entity selection
-  const handleEntityChange = (e) => {
-    const newEntity = e.target.value;
-    setSelectedEntity(newEntity);
-    setSelectedFields([]);
-    setFilters([]);
-    setValidationErrors({});
+  const [reportData, setReportData] = useState([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  
+  // Entity field options for available fields selection
+  const entityFields = {
+    contacts: [
+      { id: 'firstName', label: 'First Name', type: 'text' },
+      { id: 'lastName', label: 'Last Name', type: 'text' },
+      { id: 'email', label: 'Email', type: 'email' },
+      { id: 'phone', label: 'Phone', type: 'phone' },
+      { id: 'company', label: 'Company', type: 'text' },
+      { id: 'title', label: 'Job Title', type: 'text' },
+      { id: 'status', label: 'Status', type: 'picklist' }
+    ],
+    deals: [
+      { id: 'name', label: 'Name', type: 'text' },
+      { id: 'amount', label: 'Amount', type: 'currency' },
+      { id: 'stage', label: 'Stage', type: 'picklist' },
+      { id: 'probability', label: 'Probability', type: 'number' }
+    ],
+    tasks: [
+      { id: 'title', label: 'Title', type: 'text' },
+      { id: 'status', label: 'Status', type: 'picklist' },
+      { id: 'priority', label: 'Priority', type: 'picklist' },
+      { id: 'dueDate', label: 'Due Date', type: 'date' }
+    ]
   };
-
+  
+  // Filter operator options
+  const filterOperators = [
+    { id: 'equals', label: 'Equals' },
+    { id: 'notEquals', label: 'Does Not Equal' },
+    { id: 'contains', label: 'Contains' },
+    { id: 'notContains', label: 'Does Not Contain' },
+    { id: 'greaterThan', label: 'Greater Than' },
+    { id: 'lessThan', label: 'Less Than' }
+  ];
+  
+  // Mock report templates
+  const reportTemplates = [
+    {
+      id: 1,
+      name: 'Contact Status Distribution',
+      description: 'Shows the distribution of contacts by status',
+      type: 'chart',
+      chartType: 'pie',
+      entity: 'contacts',
+      fields: ['status'],
+      filters: []
+    },
+    {
+      id: 2,
+      name: 'Contacts by Company',
+      description: 'Lists all contacts grouped by company',
+      type: 'table',
+      entity: 'contacts',
+      fields: ['firstName', 'lastName', 'email', 'company'],
+      filters: []
+    },
+    {
+      id: 3,
+      name: 'Task Priority Analysis',
+      description: 'Analyzes tasks by priority level',
+      type: 'chart',
+      chartType: 'bar',
+      entity: 'tasks',
+      fields: ['priority'],
+      filters: []
+    }
+  ];
+  
+  // Mock data for preview
+  const mockData = {
+    contacts: [
+      { firstName: 'John', lastName: 'Doe', email: 'john@example.com', phone: '555-1234', company: 'ABC Corp', title: 'CEO', status: 'Customer' },
+      { firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', phone: '555-5678', company: 'XYZ Inc', title: 'CTO', status: 'Lead' },
+      { firstName: 'Bob', lastName: 'Johnson', email: 'bob@example.com', phone: '555-9012', company: 'ABC Corp', title: 'Developer', status: 'Customer' },
+      { firstName: 'Alice', lastName: 'Williams', email: 'alice@example.com', phone: '555-3456', company: '123 LLC', title: 'Designer', status: 'Partner' },
+      { firstName: 'Charlie', lastName: 'Brown', email: 'charlie@example.com', phone: '555-7890', company: 'XYZ Inc', title: 'Manager', status: 'Lead' }
+    ],
+    deals: [
+      { name: 'Big Deal', amount: 10000, stage: 'Proposal', probability: 50 },
+      { name: 'Medium Deal', amount: 5000, stage: 'Negotiation', probability: 75 },
+      { name: 'Small Deal', amount: 1000, stage: 'Closed Won', probability: 100 }
+    ],
+    tasks: [
+      { title: 'Follow up call', status: 'Pending', priority: 'High', dueDate: '2023-10-15' },
+      { title: 'Send proposal', status: 'Completed', priority: 'Medium', dueDate: '2023-10-10' },
+      { title: 'Schedule meeting', status: 'Pending', priority: 'Low', dueDate: '2023-10-20' }
+    ]
+  };
+  
+  // Load existing report if editing
+  useEffect(() => {
+    if (reportId) {
+      setLoading(true);
+      getReportById(reportId)
+        .then(report => {
+          if (report) {
+            setReportName(report.Name || '');
+            setReportDescription(report.description || '');
+            setReportType(report.type || 'chart');
+            setChartType(report.chartType || 'bar');
+            setSelectedEntity(report.entity || 'contacts');
+            setSelectedFields(report.fields ? report.fields.split(',') : []);
+            setFilters(report.filters ? JSON.parse(report.filters) : []);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading report:', error);
+          toast.error('Failed to load the report');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [reportId]);
+  
+  // Handle applying a template
+  const handleTemplateSelect = (template) => {
+    setReportName(template.name);
+    setReportDescription(template.description);
+    setReportType(template.type || 'chart');
+    setChartType(template.chartType || 'bar');
+    setSelectedEntity(template.entity || 'contacts');
+    setSelectedFields(template.fields || []);
+    setFilters(template.filters || []);
+    setShowTemplates(false);
+    
+    toast.success(`Applied template: ${template.name}`);
+  };
+  
+  // Handle adding a new filter
+  const handleAddFilter = () => {
+    setFilters([...filters, { field: entityFields[selectedEntity][0]?.id || '', operator: 'equals', value: '' }]);
+  };
+  
+  // Handle removing a filter
+  const handleRemoveFilter = (index) => {
+    const newFilters = [...filters];
+    newFilters.splice(index, 1);
+    setFilters(newFilters);
+  };
+  
+  // Handle updating a filter
+  const handleFilterChange = (index, field, value) => {
+    const newFilters = [...filters];
+    newFilters[index][field] = value;
+    setFilters(newFilters);
+  };
+  
   // Handle field selection
-  const toggleFieldSelection = (fieldId) => {
+  const handleFieldToggle = (fieldId) => {
     if (selectedFields.includes(fieldId)) {
       setSelectedFields(selectedFields.filter(id => id !== fieldId));
     } else {
       setSelectedFields([...selectedFields, fieldId]);
     }
   };
-
-  // Add a new filter
-  const addFilter = () => {
-    if (selectedEntity && entities[selectedEntity]?.fields.length > 0) {
-      const firstField = entities[selectedEntity].fields[0].id;
-      const firstFieldType = entities[selectedEntity].fields[0].type;
-      const validOperator = operators.find(op => op.types.includes(firstFieldType));
-      
-      setFilters([
-        ...filters,
-        {
-          id: Date.now().toString(),
-          field: firstField,
-          operator: validOperator?.id || 'equals',
-          value: ''
-        }
-      ]);
-    }
-  };
-
-  // Remove a filter
-  const removeFilter = (filterId) => {
-    setFilters(filters.filter(filter => filter.id !== filterId));
-  };
-
-  // Update filter field
-  const updateFilterField = (filterId, field, value) => {
-    setFilters(filters.map(filter => {
-      if (filter.id === filterId) {
-        // If changing field, reset operator to be compatible with new field type
-        if (field === 'field') {
-          const newFieldType = entities[selectedEntity].fields.find(f => f.id === value)?.type;
-          const validOperator = operators.find(op => op.types.includes(newFieldType));
-          return { ...filter, [field]: value, operator: validOperator?.id || 'equals', value: '' };
-        }
-        return { ...filter, [field]: value };
-      }
-      return filter;
-    }));
-  };
-
-  // Generate preview data based on selections
-  const generateReportPreview = (entity = selectedEntity, fields = selectedFields, reportFilters = filters) => {
-    if (!entity || fields.length === 0) {
-      toast.info('Select an entity and at least one field to preview');
-      return;
-    }
-
-    setIsPreviewLoading(true);
-
-    // Simulate API call to fetch data
-    setTimeout(() => {
-      try {
-        // Generate mock data based on entity and fields
-        let mockData = [];
-        
-        if (entity === 'contacts') {
-          mockData = [
-            { id: '1', firstName: 'John', lastName: 'Smith', email: 'john@example.com', phone: '(555) 123-4567', company: 'Acme Inc.', title: 'CEO', status: 'Customer', tags: ['VIP'], createdAt: '2023-01-15T10:30:00Z', lastActivity: '2023-09-10T14:25:00Z' },
-            { id: '2', firstName: 'Emily', lastName: 'Johnson', email: 'emily@example.com', phone: '(555) 987-6543', company: 'XYZ Corp', title: 'Marketing Director', status: 'Lead', tags: ['Marketing', 'New'], createdAt: '2023-03-22T09:15:00Z', lastActivity: '2023-09-05T11:30:00Z' },
-            { id: '3', firstName: 'Michael', lastName: 'Brown', email: 'michael@example.com', phone: '(555) 456-7890', company: 'Global Ltd', title: 'Sales Manager', status: 'Partner', tags: ['Sales'], createdAt: '2023-02-10T15:45:00Z', lastActivity: '2023-09-12T16:20:00Z' },
-            { id: '4', firstName: 'Sarah', lastName: 'Davis', email: 'sarah@example.com', phone: '(555) 234-5678', company: 'Tech Solutions', title: 'CTO', status: 'Customer', tags: ['VIP', 'Technical'], createdAt: '2023-04-05T11:00:00Z', lastActivity: '2023-09-08T09:15:00Z' }
-          ];
-        } else if (entity === 'deals') {
-          mockData = [
-            { id: '1', name: 'Enterprise Software License', amount: 15000, stage: 'Proposal', priority: 'High', probability: 70, contactId: '1', companyId: '1', closeDate: '2023-10-15T00:00:00Z', createdAt: '2023-06-10T08:30:00Z', lastUpdated: '2023-09-05T14:20:00Z' },
-            { id: '2', name: 'Consulting Services Package', amount: 8500, stage: 'Negotiation', priority: 'Medium', probability: 60, contactId: '2', companyId: '2', closeDate: '2023-09-30T00:00:00Z', createdAt: '2023-05-22T10:15:00Z', lastUpdated: '2023-09-10T11:45:00Z' },
-            { id: '3', name: 'Hardware Upgrade', amount: 12000, stage: 'Qualification', priority: 'Medium', probability: 40, contactId: '3', companyId: '3', closeDate: '2023-11-15T00:00:00Z', createdAt: '2023-07-05T09:00:00Z', lastUpdated: '2023-09-01T16:30:00Z' },
-            { id: '4', name: 'Annual Maintenance Contract', amount: 5000, stage: 'Closed Won', priority: 'Low', probability: 100, contactId: '4', companyId: '4', closeDate: '2023-08-30T00:00:00Z', createdAt: '2023-04-15T14:20:00Z', lastUpdated: '2023-08-30T10:00:00Z' }
-          ];
-        } else if (entity === 'tasks') {
-          mockData = [
-            { id: '1', title: 'Follow up with client', description: 'Call to discuss proposal details', status: 'Not Started', priority: 'High', assignedTo: 'John Doe', relatedTo: 'Deal #1', dueDate: '2023-09-20T00:00:00Z', completedAt: null, createdAt: '2023-09-10T09:00:00Z' },
-            { id: '2', title: 'Prepare presentation', description: 'Create slides for client meeting', status: 'In Progress', priority: 'Medium', assignedTo: 'Emily Johnson', relatedTo: 'Deal #2', dueDate: '2023-09-18T00:00:00Z', completedAt: null, createdAt: '2023-09-05T11:30:00Z' },
-            { id: '3', title: 'Send invoice', description: 'Generate and email invoice to client', status: 'Completed', priority: 'Medium', assignedTo: 'Sarah Davis', relatedTo: 'Deal #4', dueDate: '2023-09-10T00:00:00Z', completedAt: '2023-09-09T15:00:00Z', createdAt: '2023-09-01T10:15:00Z' },
-            { id: '4', title: 'Schedule demo', description: 'Set up product demonstration', status: 'Not Started', priority: 'High', assignedTo: 'Michael Brown', relatedTo: 'Deal #3', dueDate: '2023-09-25T00:00:00Z', completedAt: null, createdAt: '2023-09-12T14:00:00Z' }
-          ];
-        }
-
-        // Apply filters if any
-        if (reportFilters && reportFilters.length > 0) {
-          mockData = mockData.filter(item => {
-            return reportFilters.every(filter => {
-              const fieldValue = item[filter.field];
-              const filterValue = filter.value;
-              
-              switch (filter.operator) {
-                case 'equals':
-                  return fieldValue === filterValue;
-                case 'notEquals':
-                  return fieldValue !== filterValue;
-                case 'contains':
-                  return typeof fieldValue === 'string' 
-                    ? fieldValue.toLowerCase().includes(filterValue.toLowerCase())
-                    : Array.isArray(fieldValue) && fieldValue.includes(filterValue);
-                case 'notContains':
-                  return typeof fieldValue === 'string' 
-                    ? !fieldValue.toLowerCase().includes(filterValue.toLowerCase())
-                    : Array.isArray(fieldValue) && !fieldValue.includes(filterValue);
-                case 'greaterThan':
-                  return fieldValue > filterValue;
-                case 'lessThan':
-                  return fieldValue < filterValue;
-                case 'isNull':
-                  return fieldValue === null || fieldValue === undefined || fieldValue === '';
-                case 'isNotNull':
-          const fetchEntityData = async () => {
-            try {
-              // In a real implementation, this would use the contactsService to get actual data
-              // For this demo, we'll continue using sample data
-              
-              // If this was using real data, it would look something like:
-              // const { ApperClient } = window.ApperSDK;
-              // const apperClient = new ApperClient({
-              //   apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
-              //   apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
-              // });
-              // const response = await apperClient.fetchRecords(entity, { fields, filters });
-              // return response.data;
-              
-              // Generate mock data based on entity and fields
-              if (entity === 'contacts') {
-                return [
-            });
-          });
-        }
-
-        setPreviewData(mockData);
-        setIsPreviewLoading(false);
-        
-        if (mockData.length === 0) {
-          toast.info('No data matches your criteria');
-        }
-      } catch (error) {
-        console.error('Error generating preview:', error);
-        toast.error('Failed to generate preview');
-        setIsPreviewLoading(false);
-      }
-    }, 1000);
-  };
-
-  // Validate the report configuration
-  const validateReport = () => {
-    const errors = {};
-    
+  
+  // Handle saving the report
+  const handleSave = async () => {
     if (!reportName.trim()) {
-      errors.reportName = 'Report name is required';
-    }
-    
-    if (!selectedEntity) {
-      errors.selectedEntity = 'Please select an entity';
+      toast.error('Report name is required');
+      return;
     }
     
     if (selectedFields.length === 0) {
-      errors.selectedFields = 'Select at least one field';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Handle report saving
-  const handleSaveReport = () => {
-    if (!validateReport()) {
-      toast.error('Please fix validation errors before saving');
+      toast.error('Please select at least one field');
       return;
     }
     
-    setIsLoading(true);
+    setLoading(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      const reportData = {
-          Id: selectedReport?.id, // Include the ID if we're updating an existing report
-        name: reportName,
-        description: reportDescription,
-        type: visualizationType === 'table' ? 'table' : 'chart',
-        chartType: visualizationType,
-        entity: selectedEntity,
-        fields: selectedFields,
-        filters: filters
-      };
+    const reportData = {
+      Name: reportName,
+      description: reportDescription,
+      type: reportType,
+      chartType: chartType,
+      entity: selectedEntity,
+      fields: selectedFields.join(','),
+      filters: JSON.stringify(filters)
+    };
+    
+    try {
+      if (reportId) {
+        await updateReport({
+          Id: reportId,
+          ...reportData
+        });
+        toast.success('Report updated successfully');
+      } else {
+        await createReport(reportData);
+        toast.success('Report created successfully');
+      }
       
-      onSave(reportData);
-      setIsLoading(false);
-    }, 800);
+      if (onSave) {
+        onSave();
+      }
+    } catch (error) {
+      console.error('Error saving report:', error);
+      toast.error('Failed to save the report');
+    } finally {
+      setLoading(false);
+    }
   };
-
+  
+  // Generate preview data
+  const generatePreviewData = () => {
+    // In a real implementation, this would apply filters to the data
+    // For now, just return the mock data for the selected entity
+    setReportData(mockData[selectedEntity] || []);
+    setPreviewMode(true);
+    toast.info('Preview data loaded');
+  };
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  // Render the template selector if showTemplates is true
+  if (showTemplates) {
+    return (
+      <ReportTemplates 
+        templates={reportTemplates} 
+        onSelect={handleTemplateSelect} 
+        onCancel={() => setShowTemplates(false)}
+      />
+    );
+  }
+  
   return (
     <div className="bg-white dark:bg-surface-800 rounded-xl shadow-card overflow-hidden border border-surface-200 dark:border-surface-700">
+      {/* Header */}
       <div className="p-4 sm:p-6 border-b border-surface-200 dark:border-surface-700">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-surface-800 dark:text-white">
-              {initialReport ? 'Edit Report' : 'Create New Report'}
+              {reportId ? 'Edit Report' : 'Create New Report'}
             </h2>
             <p className="text-surface-500 dark:text-surface-400 text-sm">
-              Define your report criteria and visualize your data
+              {reportId ? 'Modify your existing report' : 'Configure your report settings'}
             </p>
           </div>
           
           <div className="flex items-center space-x-3">
             <button 
-              onClick={onCancel}
+              onClick={() => setShowTemplates(true)} 
               className="btn-outline"
-              disabled={isLoading}
             >
-              <XCircleIcon className="h-4 w-4 mr-1.5" />
+              <TemplateIcon className="h-4 w-4 mr-1.5" />
+              Use Template
+            </button>
+            <button 
+              onClick={onCancel} 
+              className="btn-outline"
+            >
               Cancel
             </button>
-            
             <button 
-              onClick={handleSaveReport}
+              onClick={handleSave}
               className="btn-primary"
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
-                <RefreshCwIcon className="animate-spin h-5 w-5 mx-auto" />
-              ) : (
-                <>
-                  <SaveIcon className="h-4 w-4 mr-1.5" />
-                  Save Report
-                </>
-              )}
+              <SaveIcon className="h-4 w-4 mr-1.5" />
+              Save Report
             </button>
           </div>
         </div>
       </div>
       
-      <div className="flex flex-col md:flex-row">
-        {/* Sidebar with steps */}
-        <div className="w-full md:w-64 lg:w-72 border-r border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/50">
-          <div className="p-4">
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-                Report Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={reportName}
-                onChange={(e) => setReportName(e.target.value)}
-                placeholder="Enter report name"
-                className={`input ${validationErrors.reportName ? 'border-red-500 dark:border-red-500' : ''}`}
-              />
-              {validationErrors.reportName && (
-                <p className="mt-1 text-sm text-red-500">{validationErrors.reportName}</p>
-              )}
+      <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Report Configuration Section */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Basic Info */}
+          <div className="card">
+            <div className="card-header">
+              <SettingsIcon className="h-5 w-5 text-primary" />
+              <h3 className="card-title">Basic Information</h3>
             </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-                Description
-              </label>
-              <textarea
-                value={reportDescription}
-                onChange={(e) => setReportDescription(e.target.value)}
-                placeholder="Brief description of this report"
-                rows="3"
-                className="input"
-              ></textarea>
-            </div>
-            
-            <div className="space-y-1 mt-6">
-              <button
-                onClick={() => setActiveStep('fields')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium ${
-                  activeStep === 'fields'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700'
-                }`}
-              >
-                <LayersIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-                <span>1. Select Data</span>
-              </button>
+            <div className="card-body space-y-4">
+              <div>
+                <label htmlFor="reportName" className="form-label">Report Name</label>
+                <input
+                  id="reportName"
+                  type="text"
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
+                  className="input"
+                  placeholder="Enter report name"
+                />
+              </div>
               
-              <button
-                onClick={() => setActiveStep('filters')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium ${
-                  activeStep === 'filters'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700'
-                }`}
-              >
-                <FilterIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-                <span>2. Apply Filters</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveStep('visualization')}
-                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium ${
-                  activeStep === 'visualization'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700'
-                }`}
-              >
-                <BarChartIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-                <span>3. Visualize</span>
-              </button>
-              
-              <button
-                onClick={() => {
-                  setActiveStep('preview');
-                  generateReportPreview();
-                }}
-                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium ${
-                  activeStep === 'preview'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700'
-                }`}
-              >
-                <EyeIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-                <span>4. Preview</span>
-              </button>
+              <div>
+                <label htmlFor="reportDescription" className="form-label">Description</label>
+                <textarea
+                  id="reportDescription"
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  className="input"
+                  rows="3"
+                  placeholder="Enter report description"
+                ></textarea>
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Main content area */}
-        <div className="flex-1 p-4 sm:p-6 overflow-auto max-h-[calc(100vh-12rem)]">
-          {activeStep === 'fields' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Select Data Source</h3>
-                <p className="text-surface-500 dark:text-surface-400 text-sm mb-4">
-                  Choose which entity you want to report on and select the fields to include
-                </p>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-                    Entity <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={selectedEntity}
-                    onChange={handleEntityChange}
-                    className={`select ${validationErrors.selectedEntity ? 'border-red-500 dark:border-red-500' : ''}`}
-                  >
-                    <option value="">Select an entity</option>
-                    {Object.entries(entities).map(([id, entity]) => (
-                      <option key={id} value={id}>{entity.name}</option>
-                    ))}
-                  </select>
-                  {validationErrors.selectedEntity && (
-                    <p className="mt-1 text-sm text-red-500">{validationErrors.selectedEntity}</p>
-                  )}
-                </div>
-                
-                {selectedEntity && (
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-                      Fields <span className="text-red-500">*</span>
-                    </label>
-                    <div className={`bg-surface-50 dark:bg-surface-700/30 rounded-lg border ${
-                      validationErrors.selectedFields 
-                        ? 'border-red-500 dark:border-red-500' 
-                        : 'border-surface-200 dark:border-surface-700'
-                    } p-3 max-h-80 overflow-y-auto`}>
-                      {entities[selectedEntity].fields.map(field => (
-                        <div key={field.id} className="flex items-center py-2 border-b border-surface-200 dark:border-surface-700/50 last:border-b-0">
-                          <input
-                            type="checkbox"
-                            id={`field-${field.id}`}
-                            checked={selectedFields.includes(field.id)}
-                            onChange={() => toggleFieldSelection(field.id)}
-                            className="h-4 w-4 text-primary border-surface-300 dark:border-surface-600 rounded focus:ring-primary"
-                          />
-                          <label htmlFor={`field-${field.id}`} className="ml-3 block text-sm text-surface-700 dark:text-surface-300">
-                            {field.name}
-                            <span className="ml-1.5 text-xs text-surface-500 dark:text-surface-400">
-                              ({field.type})
-                            </span>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    {validationErrors.selectedFields && (
-                      <p className="mt-1 text-sm text-red-500">{validationErrors.selectedFields}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
           
-          {activeStep === 'filters' && (
-            <div className="space-y-6">
+          {/* Data Source */}
+          <div className="card">
+            <div className="card-header">
+              <DatabaseIcon className="h-5 w-5 text-primary" />
+              <h3 className="card-title">Data Source</h3>
+            </div>
+            <div className="card-body space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Apply Filters</h3>
-                <p className="text-surface-500 dark:text-surface-400 text-sm mb-4">
-                  Add conditions to filter your report data (optional)
-                </p>
-                
-                <button 
-                  onClick={addFilter}
-                  className="btn-outline mb-4"
-                  disabled={!selectedEntity}
+                <label htmlFor="entity" className="form-label">Entity</label>
+                <select
+                  id="entity"
+                  value={selectedEntity}
+                  onChange={(e) => {
+                    setSelectedEntity(e.target.value);
+                    setSelectedFields([]); // Reset fields when entity changes
+                  }}
+                  className="input"
                 >
-                  <PlusIcon className="h-4 w-4 mr-1.5" />
-                  Add Filter
-                </button>
-                
-                {filters.length === 0 ? (
-                  <div className="text-center py-8 bg-surface-50 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700">
-                    <FilterIcon className="h-12 w-12 mx-auto text-surface-400 mb-2" />
-                    <p className="text-surface-500 dark:text-surface-400">
-                      No filters applied. Your report will include all data.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filters.map(filter => (
-                      <div key={filter.id} className="flex flex-wrap items-center gap-2 p-3 bg-surface-50 dark:bg-surface-700/30 rounded-lg border border-surface-200 dark:border-surface-700">
-                        <div className="min-w-[150px] flex-grow">
-                          <select
-                            value={filter.field}
-                            onChange={(e) => updateFilterField(filter.id, 'field', e.target.value)}
-                            className="select py-1.5"
-                          >
-                            {entities[selectedEntity].fields.map(field => (
-                              <option key={field.id} value={field.id}>{field.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div className="min-w-[150px] flex-grow">
-                          <select
-                            value={filter.operator}
-                            onChange={(e) => updateFilterField(filter.id, 'operator', e.target.value)}
-                            className="select py-1.5"
-                          >
-                            {operators
-                              .filter(op => {
-                                const fieldType = entities[selectedEntity].fields.find(f => f.id === filter.field)?.type;
-                                return op.types.includes(fieldType);
-                              })
-                              .map(op => (
-                                <option key={op.id} value={op.id}>{op.name}</option>
-                              ))
-                            }
-                          </select>
-                        </div>
-                        
-                        {filter.operator !== 'isNull' && filter.operator !== 'isNotNull' && (
-                          <div className="min-w-[150px] flex-grow">
-                            <input
-                              type="text"
-                              value={filter.value}
-                              onChange={(e) => updateFilterField(filter.id, 'value', e.target.value)}
-                              placeholder="Value"
-                              className="input py-1.5"
-                            />
-                          </div>
-                        )}
-                        
-                        <button
-                          onClick={() => removeFilter(filter.id)}
-                          className="p-1.5 rounded-md text-surface-500 hover:text-red-500 hover:bg-surface-200 dark:text-surface-400 dark:hover:text-red-400 dark:hover:bg-surface-700"
-                          aria-label="Remove filter"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  <option value="contacts">Contacts</option>
+                  <option value="deals">Deals</option>
+                  <option value="tasks">Tasks</option>
+                </select>
               </div>
-            </div>
-          )}
-          
-          {activeStep === 'visualization' && (
-            <div className="space-y-6">
+              
               <div>
-                <h3 className="text-lg font-semibold mb-2">Choose Visualization</h3>
-                <p className="text-surface-500 dark:text-surface-400 text-sm mb-4">
-                  Select how you want to visualize your report data
-                </p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {visualizationTypes.map(type => (
-                    <button
-                      key={type.id}
-                      onClick={() => setVisualizationType(type.id)}
-                      className={`flex flex-col items-center justify-center p-4 rounded-lg border ${
-                        visualizationType === type.id
-                          ? 'bg-primary/10 border-primary text-primary dark:bg-primary/20 dark:border-primary-light dark:text-primary-light'
-                          : 'bg-white dark:bg-surface-800 border-surface-200 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-700/50'
-                      }`}
-                    >
-                      <type.icon className="h-10 w-10 mb-2" />
-                      <span className="text-sm font-medium">{type.name}</span>
-                    </button>
+                <label className="form-label">Fields</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-surface-200 dark:border-surface-700 rounded-md p-2">
+                  {entityFields[selectedEntity]?.map(field => (
+                    <div key={field.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`field-${field.id}`}
+                        checked={selectedFields.includes(field.id)}
+                        onChange={() => handleFieldToggle(field.id)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-surface-300 rounded"
+                      />
+                      <label htmlFor={`field-${field.id}`} className="ml-2 block text-sm text-surface-700 dark:text-surface-300">
+                        {field.label}
+                      </label>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
-          )}
+          </div>
           
-          {activeStep === 'preview' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Preview Report</h3>
-                <p className="text-surface-500 dark:text-surface-400 text-sm mb-4">
-                  Preview how your report will look with sample data
-                </p>
-                
-                <button
-                  onClick={() => generateReportPreview()}
-                  className="btn-outline mb-4"
-                >
-                  <RefreshCwIcon className="h-4 w-4 mr-1.5" />
-                  Refresh Preview
-                </button>
-                
-                {isPreviewLoading ? (
-                  <div className="flex justify-center items-center h-64 bg-white dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700">
-                    <div className="flex flex-col items-center">
-                      <RefreshCwIcon className="h-10 w-10 text-primary animate-spin mb-4" />
-                      <p className="text-surface-600 dark:text-surface-400">Loading preview...</p>
-                    </div>
-                  </div>
-                ) : (!selectedEntity || selectedFields.length === 0) ? (
-                  <div className="text-center py-12 bg-surface-50 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700">
-                    <EyeIcon className="h-12 w-12 mx-auto text-surface-400 mb-2" />
-                    <p className="text-surface-700 dark:text-surface-300 font-medium mb-1">No preview available</p>
-                    <p className="text-surface-500 dark:text-surface-400">
-                      Select an entity and fields to generate a preview
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden">
-                    <ReportVisualization
-                      data={previewData}
-                      fields={selectedFields}
-                      entity={selectedEntity}
-                      visualizationType={visualizationType}
-                    />
-                  </div>
-                )}
-              </div>
+          {/* Visualization Settings */}
+          <div className="card">
+            <div className="card-header">
+              <LayoutIcon className="h-5 w-5 text-primary" />
+              <h3 className="card-title">Visualization</h3>
             </div>
-          )}
+            <div className="card-body space-y-4">
+              <div>
+                <label htmlFor="reportType" className="form-label">Report Type</label>
+                <select
+                  id="reportType"
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="input"
+                >
+                  <option value="table">Table</option>
+                  <option value="chart">Chart</option>
+                </select>
+              </div>
+              
+              {reportType === 'chart' && (
+                <div>
+                  <label htmlFor="chartType" className="form-label">Chart Type</label>
+                  <select
+                    id="chartType"
+                    value={chartType}
+                    onChange={(e) => setChartType(e.target.value)}
+                    className="input"
+                  >
+                    <option value="bar">Bar</option>
+                    <option value="line">Line</option>
+                    <option value="pie">Pie</option>
+                    <option value="area">Area</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Preview and Filters Sections */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Filters */}
+          <div className="card">
+            <div className="card-header">
+              <FilterIcon className="h-5 w-5 text-primary" />
+              <h3 className="card-title">Filters</h3>
+            </div>
+            <div className="card-body">
+              {filters.length === 0 ? (
+                <p className="text-surface-500 dark:text-surface-400 text-sm mb-4">No filters defined yet.</p>
+              ) : (
+                <div className="space-y-4 mb-4">
+                  {filters.map((filter, index) => (
+                    <div key={index} className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={filter.field}
+                        onChange={(e) => handleFilterChange(index, 'field', e.target.value)}
+                        className="input flex-1 min-w-[120px]"
+                      >
+                        {entityFields[selectedEntity]?.map(field => (
+                          <option key={field.id} value={field.id}>{field.label}</option>
+                        ))}
+                      </select>
+                      
+                      <select
+                        value={filter.operator}
+                        onChange={(e) => handleFilterChange(index, 'operator', e.target.value)}
+                        className="input flex-1 min-w-[120px]"
+                      >
+                        {filterOperators.map(op => (
+                          <option key={op.id} value={op.id}>{op.label}</option>
+                        ))}
+                      </select>
+                      
+                      <input
+                        type="text"
+                        value={filter.value}
+                        onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                        className="input flex-1 min-w-[120px]"
+                        placeholder="Value"
+                      />
+                      
+                      <button
+                        onClick={() => handleRemoveFilter(index)}
+                        className="btn-icon text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <button
+                onClick={handleAddFilter}
+                className="btn-outline"
+              >
+                <PlusIcon className="h-4 w-4 mr-1.5" />
+                Add Filter
+              </button>
+            </div>
+          </div>
+          
+          {/* Preview */}
+          <div className="card">
+            <div className="card-header">
+              <EyeIcon className="h-5 w-5 text-primary" />
+              <h3 className="card-title">Preview</h3>
+            </div>
+            <div className="card-body">
+              {!previewMode ? (
+                <div className="flex justify-center items-center h-64">
+                  <button
+                    onClick={generatePreviewData}
+                    className="btn-primary"
+                    disabled={selectedFields.length === 0}
+                  >
+                    <EyeIcon className="h-4 w-4 mr-1.5" />
+                    Generate Preview
+                  </button>
+                </div>
+              ) : (
+                <ReportVisualization
+                  data={reportData}
+                  fields={selectedFields}
+                  entity={selectedEntity}
+                  visualizationType={reportType === 'chart' ? chartType : 'table'}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
