@@ -49,12 +49,12 @@ function App() {
 
       {/* Main content */}
       <AnimatePresence mode="wait">
-        <ErrorBoundary>
-          <Routes>
+        <Routes>
+          <Route element={<ErrorBoundary>
             <Route path="/" element={<Home />} />
-            <Route path="*" element={<NotFound />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>
       </AnimatePresence>
