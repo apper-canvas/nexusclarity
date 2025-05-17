@@ -288,21 +288,3 @@ const Home = () => {
 };
 
 export default Home;
-                    size: 64,
-                    strokeWidth: 1.5
-                  })}
-                </div>
-                <h2 className="text-xl font-semibold mb-2">{navItems.find(item => item.id === activeTab)?.name || 'Unknown'} Module</h2>
-                <p className="text-surface-500 dark:text-surface-400 max-w-md mx-auto">
-                  This module is part of the demo and is not fully implemented in this MVP version.
-                </p>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
-  );
-};
-
-export default Home;
