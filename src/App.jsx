@@ -50,13 +50,15 @@ function App() {
       {/* Main content */}
       <AnimatePresence mode="wait">
         <Routes>
-          <Route element={<ErrorBoundary>
-            <Route path="/" element={<Home />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="*" element={<NotFound />} />
+          <Route path="/" element={
+            <ErrorBoundary>
+              <Home />
+            </ErrorBoundary>
+          } />
+          <Route path="/contacts" element={<ErrorBoundary><Contacts /></ErrorBoundary>} />
+          <Route path="/reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
+          <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />
           </Routes>
-        </ErrorBoundary>
       </AnimatePresence>
 
       {/* Toast notifications container */}
