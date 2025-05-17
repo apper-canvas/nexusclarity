@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getIcon } from '../../utils/iconUtils';
-import { createReport, updateReport, getReportById } from '../../services/reportService';
+import { reportService } from '../../services/reportService';
 import ReportTemplates from './ReportTemplates';
 import ReportVisualization from './ReportVisualization';
 
@@ -123,7 +123,7 @@ const ReportBuilder = ({ reportId, onSave, onCancel }) => {
   useEffect(() => {
     if (reportId) {
       setLoading(true);
-      getReportById(reportId)
+      reportService.getReportById(reportId)
         .then(report => {
           if (report) {
             setReportName(report.Name || '');
@@ -213,13 +213,13 @@ const ReportBuilder = ({ reportId, onSave, onCancel }) => {
     
     try {
       if (reportId) {
-        await updateReport({
-          Id: reportId,
+        await reportService.updateReport(reportId, {
+          name: reportName,
           ...reportData
         });
         toast.success('Report updated successfully');
       } else {
-        await createReport(reportData);
+        await reportService.createReport(reportData);
         toast.success('Report created successfully');
       }
       

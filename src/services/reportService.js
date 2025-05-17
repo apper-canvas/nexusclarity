@@ -121,7 +121,7 @@ const createReport = async (reportData) => {
     const newReport = {
       Name: reportData.name,
       Tags: reportData.tags || [],
-      description: reportData.description || '',
+      description: reportData.description || reportData.Description || '',
       type: reportData.type || 'table',
       chartType: reportData.chartType || 'table',
       entity: reportData.entity || '',
