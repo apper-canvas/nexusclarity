@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import { AnimatePresence } from 'framer-motion';
+import Contacts from './pages/Contacts';
 import { getIcon } from './utils/iconUtils';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
@@ -32,6 +33,7 @@ function App() {
   }, [darkMode]);
 
   const toggleDarkMode = () => {
+              <Route path="/contacts" element={<Contacts />} />
     setDarkMode(!darkMode);
   };
 
