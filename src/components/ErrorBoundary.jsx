@@ -68,7 +68,7 @@ class ErrorBoundary extends React.Component {
   }
   
   render() {
-      if (this.state.hasError) {
+    if (this.state.hasError) {
         // Safe fallback UI with no external dependencies
         return (
           <div className="min-h-screen flex items-center justify-center p-4">
@@ -94,11 +94,12 @@ class ErrorBoundary extends React.Component {
           </div>
         );
       }
-    
+
       try {
         // If no error occurred, simply render children
         return this.props.children || null;
       } catch (renderError) {
+      // Extra safety net if render itself fails
         // Extra safety net if render itself fails
         console.error("Error in ErrorBoundary's render method:", renderError);
         return (
@@ -112,6 +113,7 @@ class ErrorBoundary extends React.Component {
               className="mt-2 px-4 py-2 bg-red-600 text-white rounded">Reload Page</button>
           </div>
         );
+    }
     }
   }
 }
