@@ -98,7 +98,6 @@ class ErrorBoundary extends React.Component {
 
       // If no error occurred, simply render children
       return this.props.children || null;
-      
     } catch (renderError) {
       // Extra safety net if render itself fails
       console.error("Error in ErrorBoundary's render method:", renderError);
