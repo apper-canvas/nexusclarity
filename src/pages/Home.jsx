@@ -58,14 +58,6 @@ const Home = () => {
       change: '+22%', 
       icon: BarChartIcon, 
       color: 'bg-green-500/10 text-green-500'
-  },
-  {
-    id: 'contacts',
-    title: 'Contacts',
-    path: '/contacts',
-    description: 'Manage contacts with CRUD operations and filtering',
-    icon: 'Users',
-    bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/20'
     }
   ];
 
