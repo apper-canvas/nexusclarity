@@ -33,7 +33,6 @@ function App() {
   }, [darkMode]);
 
   const toggleDarkMode = () => {
-              <Route path="/contacts" element={<Contacts />} />
     setDarkMode(!darkMode);
   };
 
@@ -54,6 +53,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="*" element={<NotFound />} />
+            <Route path="/contacts" element={<Contacts />} />
             <Route path="/reports" element={<Reports />} />
           </Routes>
         </ErrorBoundary>
