@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { getIcon } from '../utils/iconUtils';
 import MainFeature from '../components/MainFeature';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 // Get icon components
 const UserIcon = getIcon('Users');
@@ -164,7 +165,14 @@ const Home = () => {
             <div className="flex-1 overflow-y-auto py-4">
               <ul className="space-y-1 px-3">
                 {navItems.map((item) => {
-                  const NavIcon = getIcon(item.icon);
+                  let NavIcon;
+                  try {
+                    NavIcon = getIcon(item.icon || 'FileQuestion');
+                  } catch (error) {
+                    console.error(`Error loading icon for ${item.id}:`, error);
+                    NavIcon = getIcon('FileQuestion');
+                  }
+                  
                   return (
                     <li key={item.id}>
                       <button
@@ -207,6 +215,7 @@ const Home = () => {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {activeTab === 'dashboard' && (
+            <ErrorBoundary>
             <div className="space-y-6">
               <div>
                 <h1 className="text-2xl font-bold text-surface-800 dark:text-white mb-1">Dashboard</h1>
@@ -244,13 +253,41 @@ const Home = () => {
               {/* Main feature */}
               <MainFeature />
             </div>
+            </ErrorBoundary>
           )}
           
           {activeTab !== 'dashboard' && (
+            <ErrorBoundary>
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
               <div className="p-6 bg-surface-200/50 dark:bg-surface-800/50 rounded-xl">
                 <div className="w-16 h-16 mx-auto mb-4 text-surface-400 dark:text-surface-500">
-                  {getIcon(navItems.find(item => item.id === activeTab)?.icon || 'FileQuestion')({
+                  {(() => {
+                    const iconName = navItems.find(item => item.id === activeTab)?.icon || 'FileQuestion';
+                    try {
+                      const IconComponent = getIcon(iconName);
+                      return <IconComponent size={64} strokeWidth={1.5} />;
+                    } catch (error) {
+                      console.error(`Error rendering icon ${iconName}:`, error);
+                      const FallbackIcon = getIcon('FileQuestion');
+                      return <FallbackIcon size={64} strokeWidth={1.5} />;
+                    }
+                  })()}
+                </div>
+                <h2 className="text-xl font-semibold mb-2">{navItems.find(item => item.id === activeTab)?.name || 'Unknown'} Module</h2>
+                <p className="text-surface-500 dark:text-surface-400 max-w-md mx-auto">
+                  This module is part of the demo and is not fully implemented in this MVP version.
+                </p>
+              </div>
+            </div>
+            </ErrorBoundary>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Home;
                     size: 64,
                     strokeWidth: 1.5
                   })}

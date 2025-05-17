@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { getIcon } from './utils/iconUtils';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Reports from './pages/Reports';
 // Get icon components
@@ -47,11 +48,13 @@ function App() {
 
       {/* Main content */}
       <AnimatePresence mode="wait">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="*" element={<NotFound />} />
-          <Route path="/reports" element={<Reports />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="*" element={<NotFound />} />
+            <Route path="/reports" element={<Reports />} />
+          </Routes>
+        </ErrorBoundary>
       </AnimatePresence>
 
       {/* Toast notifications container */}
