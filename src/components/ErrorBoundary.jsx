@@ -6,73 +6,6 @@ const AlertCircleIcon = getIcon('AlertCircle');
 const RefreshCwIcon = getIcon('RefreshCw');
 
 class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { 
-      hasError: false,
-      error: null,
-      errorInfo: null
-    };
-  }
-
-  // This lifecycle method runs when an error is thrown in a child component
-  // It returns a new state to update the component
-  static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI
-    return { 
-      hasError: true,
-      error: error
-    };
-  }
-
-  // This lifecycle method allows you to log errors
-  componentDidCatch(error, errorInfo) {
-    // You can log the error to an error reporting service here
-    console.error("Error caught by ErrorBoundary:", error, errorInfo);
-    this.setState({
-      errorInfo: errorInfo
-    });
-  }
-
-  // Reset the error state to allow the component to try rendering again
-  resetError = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null
-    });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      // Render fallback UI when an error occurs
-      return (
-        <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-surface-800 rounded-xl shadow-card border border-surface-200 dark:border-surface-700 max-w-xl mx-auto my-8">
-          <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-6">
-            <AlertCircleIcon className="w-8 h-8 text-red-600 dark:text-red-400" />
-          </div>
-          
-          <h2 className="text-xl font-bold text-surface-800 dark:text-surface-100 mb-2">Something went wrong</h2>
-          
-          <div className="text-surface-600 dark:text-surface-400 text-center mb-6">
-            <p className="mb-2">An error occurred in this section.</p>
-            <p className="mb-2">Error: {this.state.error && this.state.error.toString()}</p>
-          </div>
-          
-          <button onClick={this.resetError} className="btn-primary">
-            <RefreshCwIcon className="w-4 h-4 mr-2" />
-            Try Again
-          </button>
-        </div>
-      );
-    }
-    
-    return this.props.children;
-  }
-}
-
-export default ErrorBoundary;
-
 /**
  * A robust error boundary component that catches errors in child components
  * and displays a fallback UI when errors occur.
@@ -81,7 +14,6 @@ export default ErrorBoundary;
  * throws its own errors. It avoids using external dependencies for its fallback UI.
  */
 
-class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 
@@ -147,8 +79,8 @@ class ErrorBoundary extends React.Component {
         return (
           <div className="min-h-screen flex items-center justify-center p-4">
             <div className="p-6 bg-white dark:bg-surface-800 rounded-xl shadow-card border border-surface-200 dark:border-surface-700 max-w-lg w-full">
-              <div className="flex flex-col items-center text-center p-4">
-                <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-6">
                   <span role="img" aria-label="Warning" className="text-3xl">⚠️</span>
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
@@ -161,7 +93,7 @@ class ErrorBoundary extends React.Component {
                   </div>
                 )}
                 <button onClick={this.handleReset} className="btn-primary">
-                  <span className="mr-2">🔄</span> Try Again
+                  <RefreshCwIcon className="w-4 h-4 mr-2" /> Try Again
                 </button>
               </div>
             </div>
