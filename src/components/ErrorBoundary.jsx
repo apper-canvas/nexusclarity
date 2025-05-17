@@ -68,7 +68,6 @@ class ErrorBoundary extends React.Component {
   }
   
   render() {
-    try {
       if (this.state.hasError) {
         // Safe fallback UI with no external dependencies
         return (
@@ -93,23 +92,26 @@ class ErrorBoundary extends React.Component {
               </div>
             </div>
           </div>
-      );
-    }
+        );
+      }
     
-    // If no error occurred, simply render children
-    return this.props.children || null;
-    } catch (renderError) {
-      // Extra safety net if render itself fails
-      console.error("Error in ErrorBoundary's render method:", renderError);
-      return (
-        <div className="p-4 m-4 border border-red-500 bg-red-50 rounded">
-          <p className="text-red-700 font-bold">Critical Error in Error Boundary</p>
-          <p className="text-red-600">
-            The application encountered a serious error and the error boundary failed.
-          </p>
-          <button onClick={() => window.location.reload()} className="mt-2 px-4 py-2 bg-red-600 text-white rounded">Reload Page</button>
-        </div>
-      );
+      try {
+        // If no error occurred, simply render children
+        return this.props.children || null;
+      } catch (renderError) {
+        // Extra safety net if render itself fails
+        console.error("Error in ErrorBoundary's render method:", renderError);
+        return (
+          <div className="p-4 m-4 border border-red-500 bg-red-50 rounded">
+            <p className="text-red-700 font-bold">Critical Error in Error Boundary</p>
+            <p className="text-red-600">
+              The application encountered a serious error and the error boundary failed.
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded">Reload Page</button>
+          </div>
+        );
     }
   }
 }
