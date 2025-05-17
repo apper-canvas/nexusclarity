@@ -3,8 +3,9 @@ import React from 'react';
 /**
  * A robust error boundary component that catches errors in child components
  * and displays a fallback UI when errors occur.
- * 
- * This implementation uses multiple fallback mechanisms to ensure it never
+ *
+ * This implementation is deliberately simple and self-contained to ensure it never
+ * throws its own errors. It avoids using external dependencies for its fallback UI.
  * throws its own errors.
  */
 
@@ -27,13 +28,19 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error to console
-    console.error("Error caught by ErrorBoundary:", error, errorInfo);
-    
-    // Update state with error details
-    this.setState({ 
-      componentStack: errorInfo?.componentStack || ''
-    });
+    try {
+      // Log the error to console
+      console.error("Error caught by ErrorBoundary:", error, errorInfo);
+      
+      // Update state with error details
+      this.setState({ 
+        componentStack: errorInfo?.componentStack || '',
+        errorMessage: error?.toString() || 'An unknown error occurred'
+      });
+    } catch (catchError) {
+      // If updating state fails, log it but don't throw
+      console.error("Error in ErrorBoundary's componentDidCatch:", catchError);
+    }
   }
 
   handleReset = (e) => {
@@ -43,16 +50,19 @@ class ErrorBoundary extends React.Component {
     }
     
     // Reset the error state
-    this.setState({ 
-      hasError: false, 
-      errorMessage: '', 
-      componentStack: '' 
-    });
+    try {
+      this.setState({ 
+        hasError: false, 
+        errorMessage: '', 
+        componentStack: '' 
+      });
     
-    // If that doesn't work, reload the page
-    if (typeof window !== 'undefined') {
-      try {
-        window.location.reload();
+      // If user provided onReset callback, call it
+      if (this.props.onReset && typeof this.props.onReset === 'function') {
+        this.props.onReset();
+      }
+      
+      // For severe errors, reload the page as a fallback
       } catch (error) {
         console.error("Failed to reload page:", error);
       }
@@ -60,14 +70,20 @@ class ErrorBoundary extends React.Component {
   }
 
   render() {
-    if (this.state.hasError) {
-      // Safe fallback UI with no external dependencies
-      return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="p-6 bg-white dark:bg-surface-800 rounded-xl shadow-card border border-surface-200 dark:border-surface-700 max-w-lg w-full">
-          <div className="flex flex-col items-center text-center p-4">
-            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4">
-              <span role="img" aria-label="Warning" className="text-3xl">⚠️</span>
+    try {
+      if (this.state.hasError) {
+        // Safe fallback UI with no external dependencies
+        return (
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="p-6 bg-white dark:bg-surface-800 rounded-xl shadow-card border border-surface-200 dark:border-surface-700 max-w-lg w-full">
+              <div className="flex flex-col items-center text-center p-4">
+                <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-4">
+                  <span role="img" aria-label="Warning" className="text-3xl">⚠️</span>
+                </div>
+                <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+                <p className="text-surface-600 dark:text-surface-300 mb-4">
+                  An error occurred in the application. You can try again or refresh the page.
+                </p>
             </div>
             <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
             <p className="text-surface-600 dark:text-surface-300 mb-4">
@@ -87,8 +103,21 @@ class ErrorBoundary extends React.Component {
       );
     }
     
-    // If no error occurred, render children
-    return this.props.children;
+    // If no error occurred, simply render children
+    return this.props.children || null;
+    } catch (renderError) {
+      // Extra safety net if render itself fails
+      console.error("Error in ErrorBoundary's render method:", renderError);
+      return (
+        <div className="p-4 m-4 border border-red-500 bg-red-50 rounded">
+          <p className="text-red-700 font-bold">Critical Error in Error Boundary</p>
+          <p className="text-red-600">
+            The application encountered a serious error and the error boundary failed.
+          </p>
+          <button onClick={() => window.location.reload()} className="mt-2 px-4 py-2 bg-red-600 text-white rounded">Reload Page</button>
+        </div>
+      );
+    }
   }
 }
 
