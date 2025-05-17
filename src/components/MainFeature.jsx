@@ -41,9 +41,7 @@ const MainFeature = ({
   isLoading,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentContact, setCurrentContact] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [sortField, setSortField] = useState('lastName');
   const [sortDirection, setSortDirection] = useState('asc');
   const [errors, setErrors] = useState({});
@@ -131,7 +129,7 @@ const MainFeature = ({
       tags: []
     });
     setErrors({});
-    setIsFormOpen(true);
+    onEdit(null); // Notify parent component to open form
   };
 
   // Open form for editing an existing contact
@@ -148,12 +146,12 @@ const MainFeature = ({
       tags: [...contact.tags]
     });
     setErrors({});
-    setIsFormOpen(true);
+    onEdit(contact); // Notify parent component to open form
   };
 
   // Close form
   const closeForm = () => {
-    setIsFormOpen(false);
+    onCloseForm(); // Notify parent component to close form
   };
 
   // Handle form submission
