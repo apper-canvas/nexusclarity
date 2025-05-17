@@ -82,16 +82,17 @@ class ErrorBoundary extends React.Component {
                 <p className="text-surface-600 dark:text-surface-300 mb-4">
                   An error occurred in the application. You can try again or refresh the page.
                 </p>
-            {this.state.errorMessage && (
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg mb-4 text-left w-full overflow-auto text-sm">
-                <p className="font-mono text-red-700 dark:text-red-400">{this.state.errorMessage}</p>
+                {this.state.errorMessage && (
+                  <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg mb-4 text-left w-full overflow-auto text-sm">
+                    <p className="font-mono text-red-700 dark:text-red-400">{this.state.errorMessage}</p>
+                  </div>
+                )}
+                <button onClick={this.handleReset} className="btn-primary">
+                  <span className="mr-2">🔄</span> Try Again
+                </button>
               </div>
-            )}
-            <button onClick={this.handleReset} className="btn-primary">
-              <span className="mr-2">🔄</span> Try Again
-            </button>
+            </div>
           </div>
-        </div>
       );
     }
     
