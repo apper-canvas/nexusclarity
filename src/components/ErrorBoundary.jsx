@@ -100,7 +100,6 @@ class ErrorBoundary extends React.Component {
         return this.props.children || null;
       } catch (renderError) {
       // Extra safety net if render itself fails
-        // Extra safety net if render itself fails
         console.error("Error in ErrorBoundary's render method:", renderError);
         return (
           <div className="p-4 m-4 border border-red-500 bg-red-50 rounded">
@@ -113,7 +112,6 @@ class ErrorBoundary extends React.Component {
               className="mt-2 px-4 py-2 bg-red-600 text-white rounded">Reload Page</button>
           </div>
         );
-    }
     }
   }
 }
