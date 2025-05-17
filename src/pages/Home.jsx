@@ -73,6 +73,7 @@ const Home = () => {
   ];
 
   const createNewItem = () => {
+    // Show success toast
     toast.success("New item created successfully!");
   };
 
@@ -168,7 +169,12 @@ const Home = () => {
                     <li key={item.id}>
                       <button
                         onClick={() => {
-                          setActiveTab(item.id);
+                          if (item.id === 'reports') {
+                            // Navigate to reports page
+                            window.location.href = '/reports';
+                          } else {
+                            setActiveTab(item.id);
+                          }
                           if (window.innerWidth < 1024) setSidebarOpen(false);
                         }}
                         className={`w-full flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${

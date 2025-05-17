@@ -6,6 +6,7 @@ import { getIcon } from './utils/iconUtils';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
 
+import Reports from './pages/Reports';
 // Get icon components
 const SunIcon = getIcon('Sun');
 const MoonIcon = getIcon('Moon');
@@ -49,6 +50,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="*" element={<NotFound />} />
+          <Route path="/reports" element={<Reports />} />
         </Routes>
       </AnimatePresence>
 
