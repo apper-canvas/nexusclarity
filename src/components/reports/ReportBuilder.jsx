@@ -244,11 +244,23 @@ const ReportBuilder = ({ initialReport, onSave, onCancel }) => {
                 case 'isNull':
                   return fieldValue === null || fieldValue === undefined || fieldValue === '';
                 case 'isNotNull':
-                  return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
-                // Add more operators as needed
-                default:
-                  return true;
-              }
+          const fetchEntityData = async () => {
+            try {
+              // In a real implementation, this would use the contactsService to get actual data
+              // For this demo, we'll continue using sample data
+              
+              // If this was using real data, it would look something like:
+              // const { ApperClient } = window.ApperSDK;
+              // const apperClient = new ApperClient({
+              //   apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+              //   apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+              // });
+              // const response = await apperClient.fetchRecords(entity, { fields, filters });
+              // return response.data;
+              
+              // Generate mock data based on entity and fields
+              if (entity === 'contacts') {
+                return [
             });
           });
         }
@@ -299,6 +311,7 @@ const ReportBuilder = ({ initialReport, onSave, onCancel }) => {
     // Simulate API call delay
     setTimeout(() => {
       const reportData = {
+          Id: selectedReport?.id, // Include the ID if we're updating an existing report
         name: reportName,
         description: reportDescription,
         type: visualizationType === 'table' ? 'table' : 'chart',

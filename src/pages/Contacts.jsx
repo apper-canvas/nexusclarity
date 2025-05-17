@@ -61,21 +61,28 @@ const Contacts = () => {
 
   // Load contacts on component mount
   useEffect(() => {
-    const loadContacts = async () => {
+    let isMounted = true;
+    
+    async function loadContacts() {
       try {
         setIsLoading(true);
-        const data = contactsService.getContacts();
-        setContacts(data);
-        const uniqueCompanies = contactsService.getUniqueCompanies();
-        setCompanies(uniqueCompanies);
+        
+        // Fetch contacts from database
+        const data = await contactsService.getContacts();
+        if (isMounted) {
+          setContacts(data);
+          
+          // Get unique companies for filtering
+          const uniqueCompanies = await contactsService.getUniqueCompanies();
+          setCompanies(uniqueCompanies);
+        }
       } catch (error) {
         toast.error('Failed to load contacts');
         console.error(error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
-    };
-
+    }
     loadContacts();
   }, []);
 
@@ -268,7 +275,9 @@ const Contacts = () => {
       
       try {
         await contactsService.deleteContact(id);
-        setContacts(prev => prev.filter(contact => contact.id !== id));
+        // Update contacts list after deletion
+        const updatedContacts = await contactsService.getContacts();
+        setContacts(updatedContacts);
         toast.success('Contact deleted successfully!');
       } catch (error) {
         toast.error('Failed to delete contact');
@@ -278,7 +287,6 @@ const Contacts = () => {
       }
     }
   };
-
   // Sort contacts
   const handleSort = (field) => {
     if (sortField === field) {

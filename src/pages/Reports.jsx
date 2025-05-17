@@ -1,359 +1,331 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { getIcon } from '../utils/iconUtils';
+import { reportService } from '../services/reportService';
 import ReportBuilder from '../components/reports/ReportBuilder';
-import ReportTemplates from '../components/reports/ReportTemplates';
-import { reportTemplates } from '../data/reportData';
+import ReportVisualization from '../components/reports/ReportVisualization';
 
 // Get icon components
-const BarChartIcon = getIcon('BarChart');
-const ChevronLeftIcon = getIcon('ChevronLeft');
 const PlusIcon = getIcon('Plus');
-const SearchIcon = getIcon('Search');
+const RefreshCwIcon = getIcon('RefreshCw');
+const ClipboardIcon = getIcon('Clipboard');
 const TrashIcon = getIcon('Trash2');
 const EditIcon = getIcon('Edit2');
 const EyeIcon = getIcon('Eye');
-const FileTextIcon = getIcon('FileText');
-const DownloadIcon = getIcon('Download');
-const RefreshCwIcon = getIcon('RefreshCw');
+const ArrowLeftIcon = getIcon('ArrowLeft');
+const BarChartIcon = getIcon('BarChart');
+const TableIcon = getIcon('Table');
+const PieChartIcon = getIcon('PieChart');
+const LineChartIcon = getIcon('LineChart');
+const TrendingUpIcon = getIcon('TrendingUp');
+const AlertCircleIcon = getIcon('AlertCircle');
+
+const getChartIcon = (type) => {
+  switch (type) {
+    case 'bar': return BarChartIcon;
+    case 'line': return LineChartIcon;
+    case 'pie': return PieChartIcon;
+    case 'area': return TrendingUpIcon;
+    case 'table':
+    default: return TableIcon;
+  }
+};
 
 const Reports = () => {
   const [reports, setReports] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [activeReport, setActiveReport] = useState(null);
+  const [reportData, setReportData] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Load saved reports from localStorage or use defaults
+  // Load reports on component mount
   useEffect(() => {
-    const loadReports = () => {
-      setIsLoading(true);
-      
-      // Simulate API call
-      setTimeout(() => {
-        try {
-          const savedReports = localStorage.getItem('reports');
-          if (savedReports) {
-            setReports(JSON.parse(savedReports));
-          } else {
-            // Use some default reports if none are saved
-            const defaultReports = [
-              {
-                id: '1',
-                name: 'Monthly Sales Pipeline',
-                description: 'Overview of all deals by stage with forecast revenue',
-                type: 'chart',
-                chartType: 'bar',
-                entity: 'deals',
-                fields: ['stage', 'amount', 'closeDate'],
-                filters: [{field: 'closeDate', operator: 'inTheLast', value: '30'}],
-                createdAt: '2023-06-15T10:30:00Z',
-                lastRun: '2023-09-20T08:45:00Z'
-              },
-              {
-                id: '2',
-                name: 'Contact Activity Summary',
-                description: 'List of all contacts with recent activity',
-                type: 'table',
-                entity: 'contacts',
-                fields: ['firstName', 'lastName', 'email', 'company', 'lastActivity'],
-                filters: [{field: 'status', operator: 'equals', value: 'Customer'}],
-                createdAt: '2023-05-10T14:20:00Z',
-                lastRun: '2023-09-18T15:30:00Z'
-              }
-            ];
-            setReports(defaultReports);
-            localStorage.setItem('reports', JSON.stringify(defaultReports));
-          }
-        } catch (error) {
-          console.error('Error loading reports:', error);
-          toast.error('Failed to load reports');
-          setReports([]);
-        } finally {
-          setIsLoading(false);
-        }
-      }, 800);
+    const loadReports = async () => {
+      try {
+        setIsLoading(true);
+        const data = await reportService.getReports();
+        setReports(data);
+      } catch (error) {
+        toast.error('Failed to load reports');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadReports();
   }, []);
 
-  // Save reports to localStorage whenever they change
-  useEffect(() => {
-    if (!isLoading && reports.length > 0) {
-      localStorage.setItem('reports', JSON.stringify(reports));
-    }
-  }, [reports, isLoading]);
-
-  // Open the report builder with a blank report
-  const openNewReportBuilder = () => {
+  // Open report builder
+  const openReportBuilder = () => {
+    setIsEditing(false);
     setSelectedReport(null);
     setIsBuilderOpen(true);
-    setIsTemplatesOpen(false);
   };
 
-  // Open the report builder with an existing report
+  // Edit existing report
   const editReport = (report) => {
+    setIsEditing(true);
     setSelectedReport(report);
     setIsBuilderOpen(true);
-    setIsTemplatesOpen(false);
   };
 
-  // Open template selection
-  const openTemplates = () => {
-    setIsTemplatesOpen(true);
+  // Close report builder
+  const closeReportBuilder = () => {
     setIsBuilderOpen(false);
+    setSelectedReport(null);
   };
 
-  // Handle template selection
-  const handleTemplateSelect = (template) => {
-    const newReport = {
-      ...template,
-      id: Date.now().toString(),
-      name: `${template.name} (Copy)`,
-      createdAt: new Date().toISOString(),
-      lastRun: null
-    };
-    
-    setSelectedReport(newReport);
-    setIsTemplatesOpen(false);
-    setIsBuilderOpen(true);
-  };
-
-  // Save a report (new or edited)
-  const saveReport = (reportData) => {
-    if (selectedReport) {
-      // Update existing report
-      const updatedReports = reports.map(report => 
-        report.id === selectedReport.id ? { ...reportData, id: report.id } : report
-      );
-      setReports(updatedReports);
-      toast.success('Report updated successfully!');
-    } else {
-      // Create new report
-      const newReport = {
-        ...reportData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        lastRun: null
-      };
-      setReports([...reports, newReport]);
-      toast.success('Report created successfully!');
+  // View a report
+  const viewReport = async (report) => {
+    try {
+      setIsReportLoading(true);
+      setActiveReport(report);
+      
+      // In a real application, this would fetch actual data based on the report criteria
+      // For now, we'll generate sample data
+      
+      // Create sample data based on the entity type
+      let sampleData = [];
+      
+      if (report.entity === 'contacts') {
+        // Fetch real contact data but limit to the fields specified in the report
+        const contacts = await reportService.getContacts();
+        sampleData = contacts.map(contact => {
+          const filteredContact = {};
+          report.fields.forEach(field => {
+            filteredContact[field] = contact[field];
+          });
+          return filteredContact;
+        });
+      } else {
+        // Generate mock data for other entity types
+        for (let i = 0; i < 5; i++) {
+          const item = {};
+          report.fields.forEach(field => {
+            if (field.includes('Date') || field === 'createdAt' || field === 'dueDate') {
+              item[field] = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString();
+            } else if (field === 'amount' || field === 'probability') {
+              item[field] = Math.floor(Math.random() * 10000);
+            } else {
+              item[field] = `Sample ${field} ${i+1}`;
+            }
+          });
+          sampleData.push(item);
+        }
+      }
+      
+      setReportData(sampleData);
+      setIsReportLoading(false);
+    } catch (error) {
+      toast.error('Failed to load report data');
+      console.error(error);
+      setIsReportLoading(false);
     }
-    
-    setIsBuilderOpen(false);
   };
 
-  // Delete a report
-  const deleteReport = (id) => {
+  // Close report view
+  const closeReportView = () => {
+    setActiveReport(null);
+    setReportData([]);
+  };
+
+  // Save report
+  const saveReport = async (reportData) => {
+    try {
+      if (isEditing && selectedReport) {
+        // Update existing report
+        const updatedReport = await reportService.updateReport(selectedReport.id, reportData);
+        setReports(reports.map(r => r.id === updatedReport.id ? updatedReport : r));
+        toast.success('Report updated successfully!');
+      } else {
+        // Create new report
+        const newReport = await reportService.createReport(reportData);
+        setReports([...reports, newReport]);
+        toast.success('Report created successfully!');
+      }
+      setIsBuilderOpen(false);
+      setSelectedReport(null);
+    } catch (error) {
+      toast.error('Failed to save report');
+      console.error(error);
+    }
+  };
+
+  // Delete report
+  const deleteReport = async (id) => {
     if (window.confirm('Are you sure you want to delete this report?')) {
-      setReports(reports.filter(report => report.id !== id));
-      toast.success('Report deleted successfully!');
+      try {
+        await reportService.deleteReport(id);
+        setReports(reports.filter(r => r.id !== id));
+        toast.success('Report deleted successfully!');
+        
+        if (activeReport && activeReport.id === id) {
+          closeReportView();
+        }
+      } catch (error) {
+        toast.error('Failed to delete report');
+        console.error(error);
+      }
     }
   };
-
-  // Run a report
-  const runReport = (report) => {
-    toast.info(`Running ${report.name}...`);
-    
-    setTimeout(() => {
-      const updatedReports = reports.map(r => 
-        r.id === report.id ? { ...r, lastRun: new Date().toISOString() } : r
-      );
-      setReports(updatedReports);
-      toast.success('Report completed successfully!');
-    }, 1200);
-  };
-
-  // Export a report
-  const exportReport = (report) => {
-    toast.info(`Exporting ${report.name}...`);
-    setTimeout(() => {
-      toast.success('Report exported successfully!');
-    }, 800);
-  };
-
-  // Filter reports by search term
-  const filteredReports = reports.filter(report => 
-    report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    report.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
-    <div className="min-h-screen bg-surface-100 dark:bg-surface-900">
-      <header className="bg-white dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700 shadow-sm">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link to="/" className="flex items-center text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200">
-                <ChevronLeftIcon className="h-5 w-5 mr-1" />
-                <span>Back to Dashboard</span>
-              </Link>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="h-8 w-8 rounded-lg bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
-                <span className="text-white font-bold text-xl">N</span>
-              </span>
-              <span className="text-xl font-bold text-surface-800 dark:text-white">NexusCRM</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      {isBuilderOpen ? (
+        <ReportBuilder
+          initialReport={selectedReport}
+          onSave={saveReport}
+          onCancel={closeReportBuilder}
+        />
+      ) : activeReport ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <button onClick={closeReportView} className="btn-outline">
+              <ArrowLeftIcon className="h-4 w-4 mr-1.5" />
+              Back to Reports
+            </button>
+            <div className="text-right">
+              <h1 className="text-2xl font-bold text-surface-800 dark:text-white">{activeReport.name}</h1>
+              {activeReport.description && (
+                <p className="text-surface-500 dark:text-surface-400 text-sm mt-1">{activeReport.description}</p>
+              )}
             </div>
           </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isBuilderOpen ? (
-          <ReportBuilder 
-            initialReport={selectedReport}
-            onSave={saveReport}
-            onCancel={() => setIsBuilderOpen(false)}
-          />
-        ) : isTemplatesOpen ? (
-          <ReportTemplates 
-            templates={reportTemplates}
-            onSelect={handleTemplateSelect}
-            onCancel={() => setIsTemplatesOpen(false)}
-          />
-        ) : (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-surface-800 dark:text-white mb-1">Reports</h1>
-                <p className="text-surface-500 dark:text-surface-400">Create, manage and view custom reports</p>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search reports..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="input py-2 pl-9 pr-4 w-full"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <SearchIcon className="h-4 w-4 text-surface-400" />
-                  </div>
-                </div>
-                
-                <button onClick={openTemplates} className="btn-secondary whitespace-nowrap">
-                  <FileTextIcon className="h-4 w-4 mr-1.5" />
-                  Use Template
-                </button>
-                
-                <button onClick={openNewReportBuilder} className="btn-primary whitespace-nowrap">
-                  <PlusIcon className="h-4 w-4 mr-1.5" />
-                  Create Report
-                </button>
-              </div>
-            </div>
-            
-            {isLoading ? (
+          
+          <div className="bg-white dark:bg-surface-800 rounded-xl shadow-card overflow-hidden border border-surface-200 dark:border-surface-700">
+            {isReportLoading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="flex flex-col items-center">
-                  <RefreshCwIcon className="h-10 w-10 text-primary animate-spin mb-4" />
-                  <p className="text-surface-600 dark:text-surface-400">Loading reports...</p>
-                </div>
-              </div>
-            ) : filteredReports.length === 0 ? (
-              <div className="flex flex-col items-center justify-center bg-white dark:bg-surface-800 rounded-xl shadow-card p-8 text-center">
-                <BarChartIcon className="h-16 w-16 text-surface-400 mb-4" />
-                <h2 className="text-xl font-semibold mb-2">No Reports Found</h2>
-                <p className="text-surface-500 dark:text-surface-400 max-w-md mb-6">
-                  {searchTerm 
-                    ? 'No reports match your search criteria. Try a different search term or create a new report.'
-                    : 'You haven\'t created any reports yet. Create your first report to get started.'}
-                </p>
-                <div className="flex gap-3">
-                  <button onClick={openTemplates} className="btn-secondary">
-                    <FileTextIcon className="h-4 w-4 mr-1.5" />
-                    Use Template
-                  </button>
-                  <button onClick={openNewReportBuilder} className="btn-primary">
-                    <PlusIcon className="h-4 w-4 mr-1.5" />
-                    Create Report
-                  </button>
-                </div>
+                <RefreshCwIcon className="w-8 h-8 text-primary animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredReports.map(report => (
-                  <motion.div
+              <ReportVisualization
+                data={reportData}
+                fields={activeReport.fields}
+                entity={activeReport.entity}
+                visualizationType={activeReport.chartType}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-surface-800 dark:text-white">Reports</h1>
+              <p className="text-surface-500 dark:text-surface-400 text-sm">
+                Create and view custom reports for your data
+              </p>
+            </div>
+            
+            <button
+              onClick={openReportBuilder}
+              className="btn-primary whitespace-nowrap"
+            >
+              <PlusIcon className="h-4 w-4 mr-1.5" />
+              Create Report
+            </button>
+          </div>
+          
+          {isLoading ? (
+            <div className="text-center py-20 bg-white dark:bg-surface-800 rounded-xl shadow-card">
+              <RefreshCwIcon className="w-8 h-8 text-primary animate-spin mb-3 mx-auto" />
+              <p className="text-surface-600 dark:text-surface-400">Loading reports...</p>
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="text-center py-20 bg-white dark:bg-surface-800 rounded-xl shadow-card">
+              <ClipboardIcon className="w-12 h-12 text-surface-400 mb-3 mx-auto" />
+              <h3 className="text-lg font-medium text-surface-800 dark:text-surface-200 mb-1">No reports yet</h3>
+              <p className="text-surface-600 dark:text-surface-400 mb-6">Create your first report to get started</p>
+              <button
+                onClick={openReportBuilder}
+                className="btn-primary"
+              >
+                <PlusIcon className="h-4 w-4 mr-1.5" />
+                Create Report
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {reports.map(report => {
+                const ChartIcon = getChartIcon(report.chartType);
+                return (
+                  <div
                     key={report.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="card hover:shadow-lg transition-all duration-300 hover:translate-y-[-4px]"
+                    className="bg-white dark:bg-surface-800 rounded-xl shadow-card overflow-hidden border border-surface-200 dark:border-surface-700 flex flex-col"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-lg">{report.name}</h3>
-                        <p className="text-surface-500 dark:text-surface-400 text-sm">{report.description}</p>
-                      </div>
-                      <div className={`p-2 rounded-lg bg-${report.type === 'chart' ? 'purple' : 'blue'}-500/10 text-${report.type === 'chart' ? 'purple' : 'blue'}-500`}>
-                        {report.type === 'chart' ? <BarChartIcon className="h-5 w-5" /> : <FileTextIcon className="h-5 w-5" />}
+                    <div className="p-5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mr-3">
+                          <ChartIcon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-surface-800 dark:text-white">{report.name}</h3>
+                          <p className="text-xs text-surface-500 dark:text-surface-400">
+                            {report.entity && `${report.entity.charAt(0).toUpperCase() + report.entity.slice(1)}`}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="badge-info">
-                        {report.entity.charAt(0).toUpperCase() + report.entity.slice(1)}
-                      </span>
-                      {report.lastRun && (
-                        <span className="badge-neutral text-xs">
-                          Last run: {new Date(report.lastRun).toLocaleDateString()}
-                        </span>
-                      )}
+                    <div className="p-5 flex-grow">
+                      <p className="text-sm text-surface-600 dark:text-surface-300 line-clamp-2 mb-4">
+                        {report.description || 'No description provided'}
+                      </p>
+                      
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-surface-500 dark:text-surface-400">Type:</span>
+                          <span className="text-surface-800 dark:text-surface-200 font-medium">
+                            {report.chartType.charAt(0).toUpperCase() + report.chartType.slice(1)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-surface-500 dark:text-surface-400">Fields:</span>
+                          <span className="text-surface-800 dark:text-surface-200 font-medium">
+                            {Array.isArray(report.fields) ? report.fields.length : 0}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className="flex justify-between items-center mt-auto pt-3 border-t border-surface-200 dark:border-surface-700">
-                      <div className="text-xs text-surface-500 dark:text-surface-400">
-                        Created {new Date(report.createdAt).toLocaleDateString()}
-                      </div>
+                    <div className="p-3 bg-surface-50 dark:bg-surface-700/30 flex justify-between">
+                      <button
+                        onClick={() => viewReport(report)}
+                        className="btn-outline py-1.5 px-3 text-sm"
+                      >
+                        <EyeIcon className="h-3.5 w-3.5 mr-1.5" />
+                        View
+                      </button>
+                      
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => runReport(report)}
-                          className="p-1.5 rounded-md text-surface-500 hover:text-primary hover:bg-surface-200 dark:text-surface-400 dark:hover:text-primary-light dark:hover:bg-surface-700"
-                          aria-label="Run Report"
-                          title="Run Report"
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => exportReport(report)}
-                          className="p-1.5 rounded-md text-surface-500 hover:text-primary hover:bg-surface-200 dark:text-surface-400 dark:hover:text-primary-light dark:hover:bg-surface-700"
-                          aria-label="Export Report"
-                          title="Export Report"
-                        >
-                          <DownloadIcon className="h-4 w-4" />
-                        </button>
                         <button
                           onClick={() => editReport(report)}
                           className="p-1.5 rounded-md text-surface-500 hover:text-primary hover:bg-surface-200 dark:text-surface-400 dark:hover:text-primary-light dark:hover:bg-surface-700"
-                          aria-label="Edit Report"
-                          title="Edit Report"
+                          aria-label="Edit"
                         >
                           <EditIcon className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => deleteReport(report.id)}
                           className="p-1.5 rounded-md text-surface-500 hover:text-red-500 hover:bg-surface-200 dark:text-surface-400 dark:hover:text-red-400 dark:hover:bg-surface-700"
-                          aria-label="Delete Report"
-                          title="Delete Report"
+                          aria-label="Delete"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

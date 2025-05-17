@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { getIcon } from '../utils/iconUtils';
+import { contactsService } from '../services/contactsService';
 
 // Get icon components
 const PlusIcon = getIcon('Plus');
@@ -24,58 +25,6 @@ const FilterIcon = getIcon('Filter');
 const ArrowUpDownIcon = getIcon('ArrowUpDown');
 const MoreHorizontalIcon = getIcon('MoreHorizontal');
 
-// Sample data for contacts
-const initialContacts = [
-  {
-    id: '1',
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
-    phone: '(555) 123-4567',
-    company: 'Acme Inc.',
-    title: 'Sales Manager',
-    status: 'Customer',
-    tags: ['VIP', 'Sales'],
-    createdAt: '2023-04-15T10:30:00Z'
-  },
-  {
-    id: '2',
-    firstName: 'Emily',
-    lastName: 'Johnson',
-    email: 'emily.j@example.com',
-    phone: '(555) 987-6543',
-    company: 'Tech Solutions',
-    title: 'Marketing Director',
-    status: 'Lead',
-    tags: ['Marketing'],
-    createdAt: '2023-05-22T14:45:00Z'
-  },
-  {
-    id: '3',
-    firstName: 'Michael',
-    lastName: 'Wilson',
-    email: 'michael.w@example.com',
-    phone: '(555) 456-7890',
-    company: 'Global Enterprises',
-    title: 'CEO',
-    status: 'Partner',
-    tags: ['VIP', 'Executive'],
-    createdAt: '2023-03-10T09:15:00Z'
-  },
-  {
-    id: '4',
-    firstName: 'Sarah',
-    lastName: 'Brown',
-    email: 'sarah.b@example.com',
-    phone: '(555) 234-5678',
-    company: 'Design Studio',
-    title: 'Creative Director',
-    status: 'Lead',
-    tags: ['Design'],
-    createdAt: '2023-06-05T11:20:00Z'
-  }
-];
-
 // Status color mapping
 const statusColors = {
   Lead: 'badge-warning',
@@ -83,8 +32,14 @@ const statusColors = {
   Partner: 'badge-info'
 };
 
-const MainFeature = () => {
-  const [contacts, setContacts] = useState(initialContacts);
+const MainFeature = ({
+  contacts,
+  onEdit,
+  onDelete,
+  isFormOpen,
+  onCloseForm,
+  isLoading,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentContact, setCurrentContact] = useState(null);
@@ -207,51 +162,6 @@ const MainFeature = () => {
     
     if (!validateForm()) return;
     
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      if (currentContact) {
-        // Update existing contact
-        const updatedContacts = contacts.map(contact => 
-          contact.id === currentContact.id 
-            ? { 
-                ...contact, 
-                ...formData,
-                updatedAt: new Date().toISOString()
-              } 
-            : contact
-        );
-        setContacts(updatedContacts);
-        toast.success('Contact updated successfully!');
-      } else {
-        // Create new contact
-        const newContact = {
-          id: Date.now().toString(),
-          ...formData,
-          createdAt: new Date().toISOString()
-        };
-        setContacts([...contacts, newContact]);
-        toast.success('Contact created successfully!');
-      }
-      
-      setIsLoading(false);
-      setIsFormOpen(false);
-    }, 600);
-  };
-
-  // Delete contact
-  const deleteContact = (id) => {
-    if (window.confirm('Are you sure you want to delete this contact?')) {
-      setIsLoading(true);
-      
-      // Simulate API call delay
-      setTimeout(() => {
-        setContacts(contacts.filter(contact => contact.id !== id));
-        toast.success('Contact deleted successfully!');
-        setIsLoading(false);
-      }, 600);
-    }
   };
 
   // Sort contacts
@@ -436,7 +346,7 @@ const MainFeature = () => {
                           <EditIcon className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => deleteContact(contact.id)}
+                          onClick={() => onDelete(contact.id)}
                           className="p-1.5 rounded-md text-surface-500 hover:text-red-500 hover:bg-surface-200 dark:text-surface-400 dark:hover:text-red-400 dark:hover:bg-surface-700"
                           aria-label="Delete"
                         >
